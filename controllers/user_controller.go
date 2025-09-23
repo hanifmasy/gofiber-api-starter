@@ -4,7 +4,10 @@ import (
 	"golang_fiber_api/database"
 	"golang_fiber_api/dtos"
 	"golang_fiber_api/models"
+	"golang_fiber_api/pkg/response"
 	"golang_fiber_api/pkg/validation"
+	"golang_fiber_api/services"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -19,10 +22,18 @@ import (
 // @Success      200  {array}   models.User
 // @Failure      400  {object}  error
 // @Router       /users [get]
-func GetUsers(c *fiber.Ctx) error {
-	var users []models.User
-	database.DB.Find(&users)
-	return c.JSON(users)
+func GetUsers(userService *services.UserService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		page, _ := strconv.Atoi(c.Query("page", "1"))
+		limit, _ := strconv.Atoi(c.Query("limit", "10"))
+
+		users, err := userService.GetUsers(page, limit)
+		if err != nil {
+			return response.Error(c, fiber.StatusInternalServerError, "Failed to fetch users")
+		}
+
+		return response.Success(c, users, "Users fetched successfully")
+	}
 }
 
 // GetUser godoc
@@ -34,14 +45,30 @@ func GetUsers(c *fiber.Ctx) error {
 // @Success      200  {object}  models.User
 // @Failure      404  {object}  error
 // @Router       /users/{id} [get]
-func GetUser(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var user models.User
-	result := database.DB.First(&user, id)
-	if result.Error != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
+func GetUser(userService *services.UserService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		idParam := c.Params("id")
+		id, err := strconv.Atoi(idParam)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, "Invalid user ID")
+		}
+
+		var user models.User
+		result := database.DB.First(&user, id)
+		if result.Error != nil {
+			return response.Error(c, fiber.ErrNotFound.Code, "User not found")
+		}
+
+		var data = dtos.UserResponseDTO{
+			ID:        user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		}
+
+		return response.Success(c, data, "User fetched successfully")
 	}
-	return c.JSON(user)
 }
 
 // CreateUser godoc
@@ -54,29 +81,30 @@ func GetUser(c *fiber.Ctx) error {
 // @Success      201   {object}  models.User
 // @Failure      400   {object}  error
 // @Router       /users [post]
-func CreateUser(c *fiber.Ctx) error {
-	var dto dtos.CreateUserDTO
+func CreateUser(userService *services.UserService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var dto dtos.CreateUserDTO
+		if err := validation.ParseBody(c, &dto); err != nil {
+			return response.ValidationError(c, err)
+		}
+		if errs := validation.ValidateStruct(dto); errs != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"errors": errs})
+		}
 
-	if err := validation.ParseBody(c, &dto); err != nil {
-		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		// hash password
+		hashedPassword, err := HashPassword(dto.Password)
+		if err != nil {
+			return response.Error(c, fiber.StatusInternalServerError, "Failed to hash password")
+		}
+		dto.Password = hashedPassword
+
+		createdUser, err := userService.CreateUser(dto)
+		if err != nil {
+			return response.Error(c, fiber.StatusInternalServerError, "Failed to create user")
+		}
+
+		return response.Success(c, createdUser, "User created successfully")
 	}
-
-	// Hash password
-	hashedPassword, err := HashPassword(dto.Password)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
-	}
-
-	user := models.User{
-		Name:     dto.Name,
-		Email:    dto.Email,
-		Password: hashedPassword,
-	}
-
-	database.DB.Create(&user)
-	return c.Status(201).JSON(user)
 }
 
 // UpdateUser godoc
@@ -90,37 +118,50 @@ func CreateUser(c *fiber.Ctx) error {
 // @Success      200   {object}  models.User
 // @Failure      404   {object}  error
 // @Router       /users/{id} [put]
-func UpdateUser(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var user models.User
-	if result := database.DB.First(&user, id); result.Error != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
-	}
-
-	var dto dtos.UpdateUserDTO
-
-	if err := validation.ParseBody(c, &dto); err != nil {
-		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	if dto.Name != nil {
-		user.Name = *dto.Name
-	}
-	if dto.Email != nil {
-		user.Email = *dto.Email
-	}
-	if dto.Password != nil {
-		hashedPassword, err := HashPassword(*dto.Password)
+func UpdateUser(userService *services.UserService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		idParam := c.Params("id")
+		id, err := strconv.Atoi(idParam)
 		if err != nil {
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to hash password"})
+			return response.Error(c, fiber.StatusBadRequest, "Invalid user ID")
 		}
-		user.Password = hashedPassword
-	}
 
-	database.DB.Save(&user)
-	return c.JSON(user)
+		// fetch existing user
+		user, err := userService.GetUserByID(id)
+		if err != nil {
+			return response.Error(c, fiber.ErrNotFound.Code, "User not found")
+		}
+
+		var dto dtos.UpdateUserDTO
+		if err := validation.ParseBody(c, &dto); err != nil {
+			return response.ValidationError(c, err)
+		}
+		if errs := validation.ValidateStruct(dto); errs != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"errors": errs})
+		}
+
+		// apply updates
+		if dto.Name != nil {
+			user.Name = *dto.Name
+		}
+		if dto.Email != nil {
+			user.Email = *dto.Email
+		}
+		if dto.Password != nil {
+			hashedPassword, err := HashPassword(*dto.Password)
+			if err != nil {
+				return response.Error(c, fiber.StatusInternalServerError, "Failed to hash password")
+			}
+			user.Password = hashedPassword
+		}
+
+		// update in DB
+		if err := userService.UpdateUser(user); err != nil {
+			return response.Error(c, fiber.StatusInternalServerError, "Failed to update user")
+		}
+
+		return response.Success(c, dtos.ToUserResponseDTO(*user), "User updated successfully")
+	}
 }
 
 // DeleteUser godoc
@@ -132,16 +173,22 @@ func UpdateUser(c *fiber.Ctx) error {
 // @Success      200  {string}  string "User deleted"
 // @Failure      404  {object}  error
 // @Router       /users/{id} [delete]
-func DeleteUser(c *fiber.Ctx) error {
-	id := c.Params("id")
-	var user models.User
-	result := database.DB.First(&user, id)
-	if result.Error != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
-	}
+func DeleteUser(userService *services.UserService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		idParam := c.Params("id")
+		id, err := strconv.Atoi(idParam)
+		if err != nil {
+			return response.Error(c, fiber.StatusBadRequest, "Invalid user ID")
+		}
 
-	database.DB.Delete(&user)
-	return c.JSON(fiber.Map{"message": "User deleted"})
+		// call service directly with id
+		deletedUser, err := userService.DeleteUser(id)
+		if err != nil {
+			return response.Error(c, fiber.StatusInternalServerError, "Failed to delete user")
+		}
+
+		return response.Success(c, deletedUser, "User deleted successfully")
+	}
 }
 
 func HashPassword(password string) (string, error) {

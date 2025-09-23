@@ -38,10 +38,15 @@ func ConnectDB() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Auto migrate models
-	err = db.AutoMigrate(&models.User{})
-	if err != nil {
-		log.Fatal("Failed to migrate database:", err)
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv == "development" {
+		// Auto migrate only in dev
+		if err := db.AutoMigrate(&models.User{}); err != nil {
+			log.Fatal("failed to auto migrate:", err)
+		}
+		log.Println("✅ Auto migration completed (development mode)")
+	} else {
+		log.Println("⚠️ Skipping auto migration (production mode)")
 	}
 
 	DB = db

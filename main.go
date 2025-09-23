@@ -21,6 +21,7 @@ import (
 
 	"golang_fiber_api/database"
 	"golang_fiber_api/routes"
+	"golang_fiber_api/services"
 
 	_ "golang_fiber_api/docs"
 
@@ -40,10 +41,16 @@ func main() {
 		port = "8080"
 	}
 
-	app := fiber.New()
+	// Connect DB
 	database.ConnectDB()
+	// migrate -path migrations -database "postgres://..." up  // manual migration
 
-	routes.SetupRoutes(app)
+	// Initialize service with DB
+	serviceRegistry := services.NewServiceRegistry(database.DB)
+
+	app := fiber.New()
+
+	routes.SetupRoutes(app, serviceRegistry)
 
 	log.Fatal(app.Listen(":" + port))
 }
