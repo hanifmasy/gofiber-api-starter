@@ -4,12 +4,15 @@ import (
 	"golang_fiber_api/controllers"
 	"golang_fiber_api/services"
 
+	"golang_fiber_api/pkg/middleware"
+
 	"github.com/gofiber/fiber/v2"
 )
 
 // SetupUserRoutes initializes user-related routes
 func SetupUserRoutes(app *fiber.App, userService *services.UserService) {
 	userGroup := app.Group("/users")
+	protected := userGroup.Use(middleware.JWTMiddleware())
 
 	// Swagger annotation for GetUsers endpoint
 	// @Summary Get all users
@@ -19,9 +22,9 @@ func SetupUserRoutes(app *fiber.App, userService *services.UserService) {
 	// @Produce json
 	// @Success 200 {array} models.User
 	// @Router /users [get]
-	userGroup.Get("/", controllers.GetUsers(userService))
+	protected.Get("/", controllers.GetUsers(userService))
 
-	userGroup.Get("/:id", controllers.GetUser(userService))
+	protected.Get("/:id", controllers.GetUser(userService))
 
 	// Swagger annotation for CreateUser endpoint
 	// @Summary Create a new user
@@ -32,8 +35,8 @@ func SetupUserRoutes(app *fiber.App, userService *services.UserService) {
 	// @Param user body models.User true "User Info"
 	// @Success 201 {object} models.User
 	// @Router /users [post]
-	userGroup.Post("/", controllers.CreateUser(userService))
+	protected.Post("/", controllers.CreateUser(userService))
 
-	userGroup.Put("/:id", controllers.UpdateUser(userService))
-	userGroup.Delete("/:id", controllers.DeleteUser(userService))
+	protected.Put("/:id", controllers.UpdateUser(userService))
+	protected.Delete("/:id", controllers.DeleteUser(userService))
 }

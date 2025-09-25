@@ -17,6 +17,8 @@ import (
 	"log"
 	"os"
 
+	"golang_fiber_api/pkg/middleware"
+
 	"github.com/joho/godotenv"
 
 	"golang_fiber_api/database"
@@ -49,6 +51,8 @@ func main() {
 	serviceRegistry := services.NewServiceRegistry(database.DB)
 
 	app := fiber.New()
+
+	app.Use(middleware.CorsMiddleware())
 
 	routes.SetupRoutes(app, serviceRegistry)
 
