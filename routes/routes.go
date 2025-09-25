@@ -8,6 +8,7 @@ import (
 
 // SetupRoutes initializes all routes
 func SetupRoutes(app *fiber.App, services *services.ServiceRegistry) {
+	SetupUserAuthRoutes(app, services.UserAuthService)
 	SetupUserRoutes(app, services.UserService)
 	SetupSwaggerRoutes(app)
 }

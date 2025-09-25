@@ -8,7 +8,8 @@ import (
 
 // ServiceRegistry holds all initialized services
 type ServiceRegistry struct {
-	UserService *user.UserService
+	UserService     *user.UserService
+	UserAuthService *user.AuthService
 	// Add other services here
 	// ProductService *ProductService
 	// AuthService    *AuthService
@@ -17,7 +18,8 @@ type ServiceRegistry struct {
 // NewServiceRegistry initializes all services with DB
 func NewServiceRegistry(db *gorm.DB) *ServiceRegistry {
 	return &ServiceRegistry{
-		UserService: user.NewUserService(db),
+		UserService:     user.NewUserService(db),
+		UserAuthService: user.NewAuthService(db),
 		// ProductService: NewProductService(db),
 		// AuthService:    NewAuthService(db),
 	}
