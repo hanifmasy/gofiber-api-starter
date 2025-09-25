@@ -9,7 +9,8 @@
 
 # Build and temp folders
 /build/
-tmp/
+tmp/*
+!tmp/.gitkeep
 bin/
 dist/
 
