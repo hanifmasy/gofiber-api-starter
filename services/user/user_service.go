@@ -17,37 +17,67 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
-func (s *UserService) GetUsers(page, limit int) (dtos.PaginatedUsersResponse, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 10
-	}
-
+func (s *UserService) GetUsers(dtRequest *dtos.DataTableRequest) (dtos.PaginatedUsersResponse, error) {
 	var users []models.User
 	var totalRows int64
 
-	s.db.Model(&models.User{}).Count(&totalRows)
+	query := s.db.Model(&models.User{})
 
-	offset := (page - 1) * limit
+	if dtRequest.Search != "" {
+		searchTerm := "%" + dtRequest.Search + "%"
+		query = query.Where("name ILIKE ? OR email ILIKE ?", searchTerm, searchTerm)
+	}
 
-	if err := s.db.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
+	// Apply filters
+	for key, value := range dtRequest.Filter {
+		switch key {
+		case "status":
+			if boolVal, ok := value.(bool); ok {
+				query = query.Where("status = ?", boolVal)
+			}
+		case "startDate":
+			if dateStr, ok := value.(string); ok {
+				query = query.Where("created_at >= ?", dateStr)
+			}
+		case "endDate":
+			if dateStr, ok := value.(string); ok {
+				query = query.Where("created_at <= ?", dateStr)
+			}
+		case "array":
+			if intSlice, ok := value.([]int); ok && len(intSlice) > 0 {
+				query = query.Where("some_field IN ?", intSlice)
+			}
+			// Add more filter cases as needed
+		}
+	}
+
+	// Get total count with filters applied
+	if err := query.Count(&totalRows).Error; err != nil {
 		return dtos.PaginatedUsersResponse{}, err
 	}
 
-	// map to DTO
+	// Apply sorting, offset, and limit
+	if err := query.
+		Order(dtRequest.GetOrderClause()).
+		Offset(dtRequest.GetOffset()).
+		Limit(dtRequest.Limit).
+		Find(&users).Error; err != nil {
+		return dtos.PaginatedUsersResponse{}, err
+	}
+
+	// Map to DTO
 	var userDTOs []dtos.UserResponseDTO
 	for _, u := range users {
 		userDTOs = append(userDTOs, dtos.ToUserResponseDTO(u))
 	}
 
-	totalPages := int((totalRows + int64(limit) - 1) / int64(limit))
+	// Calculate total pages
+	totalPages := int((totalRows + int64(dtRequest.Limit) - 1) / int64(dtRequest.Limit))
 
 	return dtos.PaginatedUsersResponse{
 		Meta: dtos.PaginationMeta{
-			Page:       page,
-			Limit:      limit,
+			Page:       dtRequest.Page,
+			Limit:      dtRequest.Limit,
 			TotalRows:  totalRows,
 			TotalPages: totalPages,
 		},

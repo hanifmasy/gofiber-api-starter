@@ -24,10 +24,11 @@ import (
 // @Router       /users [get]
 func GetUsers(userService *services.UserService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		page, _ := strconv.Atoi(c.Query("page", "1"))
-		limit, _ := strconv.Atoi(c.Query("limit", "10"))
+		dtRequest := dtos.NewDataTableRequest()
+		dtRequest.ParseFromFiberContext(c)
+		dtRequest.Validate()
 
-		users, err := userService.GetUsers(page, limit)
+		users, err := userService.GetUsers(dtRequest)
 		if err != nil {
 			return response.Error(c, fiber.StatusInternalServerError, "Failed to fetch users")
 		}
