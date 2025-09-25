@@ -1,2 +1,43 @@
-.env
+# Binaries and executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Build and temp folders
+/build/
 tmp/
+bin/
+dist/
+
+# Go modules
+vendor/
+
+# Dependency cache
+/go.sum
+/go.work
+/go.work.sum
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+*.pid
+*.seed
+*.coverprofile
+
+# Config
+.env
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
