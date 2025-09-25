@@ -23,6 +23,8 @@ func (s *UserService) GetUsers(dtRequest *dtos.DataTableRequest) (dtos.Paginated
 
 	query := s.db.Model(&models.User{})
 
+	query = query.Where("deleted_at IS NULL")
+
 	if dtRequest.Search != "" {
 		searchTerm := "%" + dtRequest.Search + "%"
 		query = query.Where("name ILIKE ? OR email ILIKE ?", searchTerm, searchTerm)
@@ -73,6 +75,10 @@ func (s *UserService) GetUsers(dtRequest *dtos.DataTableRequest) (dtos.Paginated
 
 	// Calculate total pages
 	totalPages := int((totalRows + int64(dtRequest.Limit) - 1) / int64(dtRequest.Limit))
+
+	if userDTOs == nil {
+		userDTOs = []dtos.UserResponseDTO{}
+	}
 
 	return dtos.PaginatedUsersResponse{
 		Meta: dtos.PaginationMeta{
