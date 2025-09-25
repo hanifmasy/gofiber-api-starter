@@ -1,10 +1,14 @@
 package services
 
-import "gorm.io/gorm"
+import (
+	"golang_fiber_api/services/user"
+
+	"gorm.io/gorm"
+)
 
 // ServiceRegistry holds all initialized services
 type ServiceRegistry struct {
-	UserService *UserService
+	UserService *user.UserService
 	// Add other services here
 	// ProductService *ProductService
 	// AuthService    *AuthService
@@ -13,7 +17,7 @@ type ServiceRegistry struct {
 // NewServiceRegistry initializes all services with DB
 func NewServiceRegistry(db *gorm.DB) *ServiceRegistry {
 	return &ServiceRegistry{
-		UserService: NewUserService(db),
+		UserService: user.NewUserService(db),
 		// ProductService: NewProductService(db),
 		// AuthService:    NewAuthService(db),
 	}

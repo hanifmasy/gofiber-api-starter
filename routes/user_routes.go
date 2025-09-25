@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"golang_fiber_api/controllers"
-	"golang_fiber_api/services"
+	controllers "golang_fiber_api/controllers/user"
+	services "golang_fiber_api/services/user"
 
 	"golang_fiber_api/pkg/middleware"
 

@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"golang_fiber_api/services"
+	services "golang_fiber_api/services"
 
 	"github.com/gofiber/fiber/v2"
 )
