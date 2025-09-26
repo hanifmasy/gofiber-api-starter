@@ -23,6 +23,7 @@ import (
 
 	"golang_fiber_api/database"
 	"golang_fiber_api/routes"
+	"golang_fiber_api/seeders"
 	"golang_fiber_api/services"
 
 	_ "golang_fiber_api/docs"
@@ -46,6 +47,8 @@ func main() {
 	// Connect DB
 	database.ConnectDB()
 	// migrate -path migrations -database "postgres://..." up  // manual migration
+	db := database.DB
+	seeders.Run(db)
 
 	// Initialize service with DB
 	serviceRegistry := services.NewServiceRegistry(database.DB)

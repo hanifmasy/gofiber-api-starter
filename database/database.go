@@ -41,8 +41,12 @@ func ConnectDB() {
 
 	appEnv := os.Getenv("APP_ENV")
 	if appEnv == "development" {
-		// Auto migrate only in dev
-		if err := db.AutoMigrate(&models.User{}); err != nil {
+		modelsToMigrate := []interface{}{
+			&models.User{},
+			&models.City{},
+			// add more models as your app grows
+		}
+		if err := db.AutoMigrate(modelsToMigrate...); err != nil {
 			log.Fatal("failed to auto migrate:", err)
 		}
 		log.Println("✅ Auto migration completed (development mode)")
