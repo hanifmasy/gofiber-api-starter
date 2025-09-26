@@ -19,6 +19,7 @@ import (
 
 	"golang_fiber_api/pkg/cache"
 	"golang_fiber_api/pkg/middleware"
+	"golang_fiber_api/pkg/observability"
 
 	"github.com/joho/godotenv"
 
@@ -59,9 +60,9 @@ func main() {
 
 	app := fiber.New()
 
+	observability.Setup(app)
 	app.Use(middleware.CorsMiddleware())
 
 	routes.SetupRoutes(app, serviceRegistry)
-
 	log.Fatal(app.Listen(":" + port))
 }
