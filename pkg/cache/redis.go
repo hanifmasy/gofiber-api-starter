@@ -13,7 +13,8 @@ var (
 	Ctx = context.Background()
 )
 
-func InitRedis() {
+// Init initializes Redis connection from environment variables
+func Init() {
 	Rdb = redis.NewClient(&redis.Options{
 		Addr:     os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
 		Password: os.Getenv("REDIS_PASSWORD"), // "" if no password
@@ -21,9 +22,9 @@ func InitRedis() {
 	})
 
 	// Test connection
-	_, err := Rdb.Ping(Ctx).Result()
-	if err != nil {
-		log.Fatal("❌ Failed to connect to Redis:", err)
+	if err := Rdb.Ping(Ctx).Err(); err != nil {
+		log.Fatalf("❌ Failed to connect Redis: %v", err)
 	}
+
 	log.Println("✅ Redis connected")
 }

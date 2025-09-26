@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 
+	"golang_fiber_api/pkg/cache"
 	"golang_fiber_api/pkg/middleware"
 
 	"github.com/joho/godotenv"
@@ -47,11 +48,14 @@ func main() {
 	// Connect DB
 	database.ConnectDB()
 	// migrate -path migrations -database "postgres://..." up  // manual migration
+
 	db := database.DB
 	seeders.Run(db)
 
 	// Initialize service with DB
 	serviceRegistry := services.NewServiceRegistry(database.DB)
+
+	cache.Init()
 
 	app := fiber.New()
 
