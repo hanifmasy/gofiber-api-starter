@@ -21,6 +21,15 @@ func InitSentry(dsn, environment string) {
 		// Set TracesSampleRate to 1.0 to capture 100% of the transactions for performance monitoring.
 		// We recommend adjusting this value in production,
 		TracesSampleRate: 1.0,
+		// TracesSampler: sentry.TracesSampler(func(ctx sentry.SamplingContext) float64 {
+		// 	// As an example, this does not send some
+		// 	// transactions to Sentry based on their name.
+		// 	if ctx.Span.Name == "GET /health" {
+		// 		return 0.0
+		// 	}
+
+		// 	return 1.0
+		// }),
 	})
 	if err != nil {
 		log.Printf("Sentry initialization failed: %v", err)
