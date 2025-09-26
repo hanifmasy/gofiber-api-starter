@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: fiber_api
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    env_file: .env
+    environment:
+      APP_ENV: production   # override default from .env
+      DB_HOST: postgres     # override local DB_HOST
+      REDIS_HOST: redis     # override local Redis host
+    ports:
+      - "8080:8080"
+
+  postgres:
+    image: postgres:15
+    container_name: fiber_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: fiber_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
