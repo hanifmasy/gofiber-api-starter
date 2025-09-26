@@ -10,5 +10,6 @@ import (
 func SetupRoutes(app *fiber.App, services *services.ServiceRegistry) {
 	SetupUserAuthRoutes(app, services.UserAuthService)
 	SetupUserRoutes(app, services.UserService)
+	SetupCityRoutes(app, services.CityService)
 	SetupSwaggerRoutes(app)
 }
